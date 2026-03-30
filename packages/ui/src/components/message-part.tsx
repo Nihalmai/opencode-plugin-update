@@ -55,6 +55,7 @@ import { ToolStatusTitle } from "./tool-status-title"
 import { animate } from "motion"
 import { useLocation } from "@solidjs/router"
 import { attached, inline, kind } from "./message-file"
+import { HTMLRenderer, GenUIRenderer, parseMessage } from "@opencode-ai/genui-plugin"
 
 function ShellSubmessage(props: { text: string; animate?: boolean }) {
   let widthRef: HTMLSpanElement | undefined
@@ -1363,8 +1364,20 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     <Show when={throttledText()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
-          <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} />
-        </div>
+  {(() => {
+    const segments = parseMessage(throttledText())
+    return segments.map((seg, i) => {
+      if (seg.type === "html") return <HTMLRenderer html={seg.content} />
+      if (seg.type === "genui") {
+  try {
+    const parsed = JSON.parse(seg.content)
+    return <GenUIRenderer component={parsed} />
+  } catch { return null }
+}
+      return <Markdown text={seg.content} cacheKey={part().id + i} streaming={streaming()} />
+    })
+  })()}
+</div>
         <Show when={showCopy()}>
           <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
             <Tooltip

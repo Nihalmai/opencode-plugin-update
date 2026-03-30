@@ -1,0 +1,12 @@
+{
+  "name": "@opencode-ai/genui-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./plugin": "./src/plugin.ts"
+  },
+  "dependencies": {
+    "solid-js": "catalog:"
+  }
+}
