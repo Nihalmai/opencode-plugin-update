@@ -2,17 +2,33 @@
   "$schema": "https://opencode.ai/config.json",
   "provider": {
     "opencode": {
-      "options": {},
-    },
+      "options": {}
+    }
   },
-  "permission": {
-    "edit": {
-      "packages/opencode/migration/*": "deny",
+  "mcp": {
+    "my-server": {
+      "type": "remote",
+      "url": "http://10.0.0.89:8080/sse",
+      "enabled": true
     },
+    "cost-explorer": {
+      "type": "remote",
+      "url": "http://54.160.124.197:8080/servers/cost-explorer/mcp",
+      "enabled": true
+    },
+    "aws-api": {
+      "type": "remote",
+      "url": "http://54.160.124.197:8080/servers/aws-api-mcp-server/mcp",
+      "enabled": true
+    },
+    "billing": {
+      "type": "remote",
+      "url": "http://54.160.124.197:8080/servers/billing-cost-management/mcp",
+      "enabled": true
+    }
   },
-  "mcp": {},
   "tools": {
     "github-triage": false,
-    "github-pr-search": false,
-  },
+    "github-pr-search": false
+  }
 }
