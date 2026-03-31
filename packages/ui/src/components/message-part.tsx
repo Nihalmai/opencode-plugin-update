@@ -1368,12 +1368,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     const segments = parseMessage(throttledText())
     return segments.map((seg, i) => {
       if (seg.type === "html") return <HTMLRenderer html={seg.content} />
-      if (seg.type === "genui") {
-  try {
-    const parsed = JSON.parse(seg.content)
-    return <GenUIRenderer component={parsed} />
-  } catch { return null }
-}
+      if (seg.type === "genui") return <GenUIRenderer component={seg.component} />
       return <Markdown text={seg.content} cacheKey={part().id + i} streaming={streaming()} />
     })
   })()}
@@ -2215,3 +2210,4 @@ ToolRegistry.register({
     return <BasicTool icon="brain" status={props.status} trigger={trigger()} hideDetails />
   },
 })
+
