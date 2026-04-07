@@ -1,13 +1,20 @@
 {
   "name": "opencode-genui-plugin",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Rich UI rendering plugin for OpenCode - charts, weather, tables, metrics and more",
   "main": "./src/plugin.ts",
   "exports": {
     ".": "./src/index.tsx",
     "./plugin": "./src/plugin.ts"
   },
-  "keywords": ["opencode", "plugin", "ui", "charts", "a2ui", "genui"],
+  "keywords": [
+    "opencode",
+    "plugin",
+    "ui",
+    "charts",
+    "a2ui",
+    "genui"
+  ],
   "author": "Nihalmai",
   "license": "MIT",
   "repository": {

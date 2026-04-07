@@ -1,4 +1,4 @@
-import { type Component, For, Show, Switch, Match, createMemo, createSignal } from "solid-js"
+import { type Component, For, Show, Switch, Match, createMemo, createSignal, onMount } from "solid-js"
 import type { GenUIComponent } from "./genui-schema"
 
 const GenUIRenderer: Component<{ component: GenUIComponent }> = (props) => {
@@ -13,7 +13,6 @@ const GenUIRenderer: Component<{ component: GenUIComponent }> = (props) => {
         <Match when={props.component.type === "status"}><StatusCard c={props.component as any} /></Match>
         <Match when={props.component.type === "alert"}><AlertCard c={props.component as any} /></Match>
         <Match when={props.component.type === "card"}><InfoCard c={props.component as any} /></Match>
-        <Match when={props.component.type === "form"}><FormCard c={props.component as any} /></Match>
         <Match when={props.component.type === "clarify"}><ClarifyCard c={props.component as any} /></Match>
       </Switch>
     </div>
@@ -439,14 +438,12 @@ const TableCard: Component<{ c: any }> = (props) => {
 
   const toggleSort = (key: string) => {
     if (sortKey() === key) {
-      setDir(sortDir() === "asc" ? "desc" : "asc")
+      setSortDir(sortDir() === "asc" ? "desc" : "asc")
     } else {
       setSortKey(key)
       setSortDir("asc")
     }
   }
-
-  const setDir = setSortDir
 
   return (
     <div style={{ ...card, "max-width": "580px" }}>
@@ -719,7 +716,7 @@ const InfoCard: Component<{ c: any }> = (props) => {
       </div>
     </div>
   )
-}    
+}
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 
@@ -826,192 +823,12 @@ const FormCard: Component<{ c: any }> = (props) => {
 
 const ClarifyCard: Component<{ c: any }> = (props) => {
   const questions = () => props.c.questions ?? []
-  const [answers, setAnswers] = createSignal<Record<string, string | string[]>>({})
-  const [submitted, setSubmitted] = createSignal(false)
-  const [dragState, setDragState] = createSignal<{ qId: string; from: number } | null>(null)
 
-  const setAnswer = (id: string, val: string | string[]) =>
-    setAnswers(prev => ({ ...prev, [id]: val }))
+  onMount(() => {
+    window.dispatchEvent(new CustomEvent("genui-clarify-open", {
+      detail: { questions: questions() }
+    }))
+  })
 
-  const toggleMulti = (id: string, opt: string) => {
-    const cur = (answers()[id] as string[]) ?? []
-    setAnswer(id, cur.includes(opt) ? cur.filter(x => x !== opt) : [...cur, opt])
-  }
-
-  const initRank = (id: string, opts: string[]) => {
-    if (!answers()[id]) setAnswer(id, [...opts])
-  }
-
-  const moveRank = (id: string, from: number, to: number) => {
-    const arr = [...((answers()[id] as string[]) ?? [])]
-    const [item] = arr.splice(from, 1)
-    arr.splice(to, 0, item)
-    setAnswer(id, arr)
-  }
-
-  const allAnswered = () =>
-    questions().every((q: any) => {
-      const a = answers()[q.id]
-      if (q.kind === "rank_priorities") return true
-      if (!a) return false
-      if (Array.isArray(a)) return a.length > 0
-      return a !== ""
-    })
-
-  const submit = () => {
-    if (!allAnswered()) return
-    const lines = questions().map((q: any) => {
-      const a = answers()[q.id]
-      return `${q.question}: ${Array.isArray(a) ? a.join(", ") : a}`
-    })
-    window.dispatchEvent(new CustomEvent("genui-submit", { detail: { text: lines.join(" | ") } }))
-    setSubmitted(true)
-  }
-
-  if (submitted()) {
-    return (
-      <div style={{ "font-size": "13px", color: "#94a3b8", "padding": "4px 0" }}>
-        ✓ Got it! Working on it…
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ display: "flex", "flex-direction": "column", gap: "20px", "padding": "4px 0" }}>
-      <For each={questions()}>
-        {(q: any) => (
-          <div>
-            <div style={{ "font-size": "14px", "font-weight": "600", color: "inherit", "margin-bottom": "10px" }}>
-              {q.question}
-            </div>
-
-            {/* single_select */}
-            <Show when={q.kind === "single_select"}>
-              <div style={{ display: "flex", "flex-direction": "column", gap: "6px" }}>
-                <For each={q.options}>
-                  {(opt: string, i) => {
-                    const selected = () => answers()[q.id] === opt
-                    return (
-                      <div
-                        onClick={() => setAnswer(q.id, opt)}
-                        style={{
-                          display: "flex", "align-items": "center", gap: "12px",
-                          padding: "10px 14px", "border-radius": "8px",
-                          background: selected() ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.04)",
-                          border: selected() ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                          cursor: "pointer", transition: "all 0.15s",
-                        }}
-                      >
-                        <span style={{
-                          width: "22px", height: "22px", "border-radius": "50%",
-                          background: selected() ? "#6366f1" : "rgba(255,255,255,0.08)",
-                          color: "#fff", "font-size": "11px", "font-weight": "700",
-                          display: "flex", "align-items": "center", "justify-content": "center",
-                          "flex-shrink": "0",
-                        }}>{i() + 1}</span>
-                        <span style={{ "font-size": "13px", color: selected() ? "#a5b4fc" : "inherit", "font-weight": selected() ? "600" : "400" }}>{opt}</span>
-                        <Show when={selected()}>
-                          <span style={{ "margin-left": "auto", color: "#6366f1" }}>↩</span>
-                        </Show>
-                      </div>
-                    )
-                  }}
-                </For>
-              </div>
-            </Show>
-
-            {/* multi_select */}
-            <Show when={q.kind === "multi_select"}>
-              <div style={{ display: "flex", "flex-direction": "column", gap: "6px" }}>
-                <For each={q.options}>
-                  {(opt: string, i) => {
-                    const selected = () => ((answers()[q.id] as string[]) ?? []).includes(opt)
-                    return (
-                      <div
-                        onClick={() => toggleMulti(q.id, opt)}
-                        style={{
-                          display: "flex", "align-items": "center", gap: "12px",
-                          padding: "10px 14px", "border-radius": "8px",
-                          background: selected() ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.04)",
-                          border: selected() ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                          cursor: "pointer", transition: "all 0.15s",
-                        }}
-                      >
-                        <span style={{
-                          width: "22px", height: "22px", "border-radius": "50%",
-                          background: selected() ? "#6366f1" : "rgba(255,255,255,0.08)",
-                          color: "#fff", "font-size": "11px", "font-weight": "700",
-                          display: "flex", "align-items": "center", "justify-content": "center",
-                          "flex-shrink": "0",
-                        }}>{i() + 1}</span>
-                        <span style={{ "font-size": "13px", color: selected() ? "#a5b4fc" : "inherit", "font-weight": selected() ? "600" : "400" }}>{opt}</span>
-                        <Show when={selected()}>
-                          <span style={{ "margin-left": "auto", color: "#6366f1" }}>✓</span>
-                        </Show>
-                      </div>
-                    )
-                  }}
-                </For>
-              </div>
-              <div style={{ "font-size": "11px", color: "#6b7280", "margin-top": "6px" }}>Select all that apply</div>
-            </Show>
-
-            {/* rank_priorities */}
-            <Show when={q.kind === "rank_priorities"}>
-              {(() => { initRank(q.id, q.options); return null })()}
-              <div style={{ display: "flex", "flex-direction": "column", gap: "6px" }}>
-                <For each={(answers()[q.id] as string[]) ?? q.options}>
-                  {(opt: string, i) => (
-                    <div
-                      draggable
-                      onDragStart={() => setDragState({ qId: q.id, from: i() })}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => {
-                        const ds = dragState()
-                        if (ds && ds.qId === q.id) moveRank(q.id, ds.from, i())
-                        setDragState(null)
-                      }}
-                      style={{
-                        display: "flex", "align-items": "center", gap: "12px",
-                        padding: "10px 14px", "border-radius": "8px",
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        cursor: "grab", "user-select": "none",
-                      }}
-                    >
-                      <span style={{
-                        width: "22px", height: "22px", "border-radius": "50%",
-                        background: "#6366f1", color: "#fff",
-                        "font-size": "11px", "font-weight": "700",
-                        display: "flex", "align-items": "center", "justify-content": "center",
-                        "flex-shrink": "0",
-                      }}>{i() + 1}</span>
-                      <span style={{ "font-size": "13px", color: "inherit", flex: "1" }}>{opt}</span>
-                      <span style={{ color: "#4b5563", "font-size": "16px" }}>⠿</span>
-                    </div>
-                  )}
-                </For>
-              </div>
-              <div style={{ "font-size": "11px", color: "#6b7280", "margin-top": "6px" }}>Drag to re-order</div>
-            </Show>
-          </div>
-        )}
-      </For>
-
-      <button
-        onClick={submit}
-        disabled={!allAnswered()}
-        style={{
-          "align-self": "flex-start",
-          padding: "8px 18px",
-          background: allAnswered() ? "#6366f1" : "rgba(255,255,255,0.06)",
-          color: allAnswered() ? "#fff" : "#6b7280",
-          border: "none", "border-radius": "8px",
-          "font-size": "13px", "font-weight": "600",
-          cursor: allAnswered() ? "pointer" : "not-allowed",
-          transition: "all 0.2s", "font-family": "inherit",
-        }}
-      >{allAnswered() ? "Continue ↩" : "Answer all to continue"}</button>
-    </div>
-  )
+  return null
 }
